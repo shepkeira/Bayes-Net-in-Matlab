@@ -1,0 +1,63 @@
+function proabilities = time_probability()
+    easy_array = probability('all-easy.txt');
+    hard_array = probability('all-hard.txt');
+    proabilities = [easy_array, hard_array];
+    %s = ns / 1000000000;
+end
+
+function easy_probs = probability(file_name)
+    times_array_ns = time_array(file_name);
+    times_array = times_array_ns / 1000000000;
+    %catching divide by 0 error
+    if isempty(times_array)
+        Pr_slow = 0;
+        Pr_fast = 0;
+        return
+    end
+    avg = mean(times_array);
+    sd = std(times_array);
+    low_range = avg - sd;
+    high_range = avg + sd;
+    slow = times_array(1, times_array(1, :)>high_range);
+    fast = times_array(1, times_array(1, :)<low_range);
+    
+    Pr_slow = length(slow) / length(times_array);
+    Pr_fast = length(fast) / length(times_array);
+    Pr_avg = 1 - Pr_slow - Pr_fast;
+    easy_probs = [Pr_slow,Pr_fast,Pr_avg];
+end
+
+function times_array = time_array(file_name)
+    hard = readlines(file_name);
+    hard_matrix = [];
+    hard_by_student = string.empty;
+    
+    row = 1;
+    for k = 1:length(hard)
+        if hard(k) ~= ""
+            hard_by_student(end+1) = hard(k);
+        else
+            hard_matrix = [hard_matrix, hard_by_student.'];
+            hard_by_student = string.empty;
+            row = row + 1;
+        end
+    end
+    
+    hard_values = [];
+    
+    for k = 1:width(hard_matrix)
+        col = hard_matrix(:, k);
+        resonse_time = 0;
+        for j = 1:length(col)
+            row = col(j);
+            if contains(row, "Question ")
+                index = strfind(row, "Estimated task time (ns): ");
+                i = strlength("Estimated task time (ns): ");
+                resonse_time = str2double(extractBetween(row, i+1, strlength(row)));
+            end
+        end
+        hard_values = [hard_values, resonse_time];
+    end
+
+    times_array = hard_values;
+end

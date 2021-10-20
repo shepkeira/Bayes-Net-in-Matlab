@@ -1,3 +1,4 @@
+%Model structure definition
 %define nodes
 Difficulty=1;Accuracy=2;Time=3;NeedHelp=4;Confused=5;
 %create dag
@@ -10,11 +11,13 @@ ns(3) = 3;
 % create bayes net
 bnet = mk_bnet(dag, ns);
 
+%CPT definition for Pr(Difficulty)
 % add CPT for Difficulty which has uniform distribution
 bnet.CPD{Difficulty} = tabular_CPD(bnet, Difficulty, 'CPT', [0.5 0.5]);
 
+%Code to preprocess the downloaded data files: for accuracy and time
 % reading from files
-avgs = read_files();
+avgs = accuracy_averages();
 easy_avg_correct = avgs(1);
 hard_avg_correct = avgs(2);
 
@@ -28,7 +31,7 @@ hard_slow = time_probs(4);
 hard_fast = time_probs(5);
 hard_avg = time_probs(6);
 
-
+%CPT definition for Pr(Accuracy|Difficulty)
 %Pr(Accuracy=right|Difficulty=easy) = easy_avg_correct
 %Pr(Accuracy=right|Difficulty=hard) = hard_avg_correct
 
@@ -39,6 +42,7 @@ CPT(1,:) = [easy_avg_correct, 1-easy_avg_correct];
 CPT(2, :) = [hard_avg_correct, 1-hard_avg_correct];
 bnet.CPD{Accuracy}=tabular_CPD(bnet, Accuracy, 'CPT', CPT);
 
+%CPT definition for Pr(Time|Difficulty)
 %Pr(Time=slow|Difficulty=easy) = easy_slow
 %Pr(Time=avg|Difficulty=easy) = easy_avg
 %Pr(Time=fast|Difficulty=easy) = easy_fast
@@ -52,6 +56,8 @@ CPT = zeros(2,3);
 CPT(1,:) = [easy_slow, easy_avg, easy_fast];
 CPT(2, :) = [hard_slow, hard_avg, hard_fast];
 bnet.CPD{Time}=tabular_CPD(bnet, Time, 'CPT', CPT);
+
+% reasonable definition for CPT for Pr(NeedHelp|Difficulty) with rationale
 
 %Pr(NeedHelp|Easy) = 0.2
 %Pr(NeedHelp|Hard) = 0.6
@@ -71,6 +77,8 @@ CPT(1,:) = [0.2, 0.8];
 CPT(2, :) = [0.6, 0.4];
 bnet.CPD{NeedHelp}=tabular_CPD(bnet, NeedHelp, 'CPT', CPT);
 
+%reasonable definition for CPT for Pr(Confused|NeedHelp) with rationale
+
 % Pr(Confused|NeedHelp=False) = 0.1
 % Pr(Confused|NeedHelp=True) = 0.75
 %If you do not need help, there is a possibility that you are still
@@ -89,6 +97,9 @@ CPT(2, :) = [0.75, 0.25];
 bnet.CPD{Confused}=tabular_CPD(bnet, Confused, 'CPT', CPT);
 
 
+%Code to compute the required inference task: define the right inference query,
+%enter evidence correctly, and compute the two marginal probabilities requested
+
 % create inference engine for that BN
 engine = jtree_inf_engine(bnet);
 % define variable for entering evidence
@@ -102,5 +113,6 @@ engine = enter_evidence(engine, ev);
 m = marginal_nodes(engine, NeedHelp);
 % display the true value (at index 2) of the marginal
 fprintf('P(NeedHelp=true|Confused=true, Accuracy=true, Time=fast) = %5.3f\n', m.T(1))
-
+% when I run I get
+% P(NeedHelp=true|Confused=true, Accuracy=true, Time=fast) = 0.133
 
